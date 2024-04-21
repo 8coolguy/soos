@@ -33,7 +33,7 @@ public:
 	int getPartitionNumber(std::string name);
 	void allocateDisks();
 	int getDisk(int partition);
-	void scp(int src,int dst,std::string name);
+	void scp(int src,int dst,std::string name,std::string srcLoc);
 	std::string addDisk(std::string address);
 	void deloadDisk(int disk);
 	std::string rmDisk(int diskNumber);

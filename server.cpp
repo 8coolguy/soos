@@ -16,20 +16,20 @@
 
 using namespace std;
 
-void createDirectory(char *argv[], int argc);
-void checkConnectionError(int *n);
-string handleCmd(int cmd, string arg);
-string handleDownload(string arg);
-string handleList(string arg);
-string handleUpload(string arg);
-string handleDelete(string arg);
-string handleAdd(string arg);
-string handleRemove(string arg);
-
 string USER;
 Table t;
 struct sockaddr_in servAddr, clientAddr;
 int port;
+
+void createDirectory(char *argv[], int argc);
+void checkConnectionError(int *n);
+string handleCmd(int cmd, string arg);
+string handleDownload(string arg){return t.retrieve(arg,Table::charAToStr(inet_ntoa(clientAddr.sin_addr),15));}
+string handleList(string arg){return t.listFiles(arg);}
+string handleUpload(string arg){return t.insert(arg);}
+string handleDelete(string arg){return t.deleteFile(arg);}
+string handleAdd(string arg){return t.addDisk(arg);}
+string handleRemove(string arg){return t.rmDisk(stoi(arg));}
 int main(int argc, char *argv[]){
 	port = PORT;
 	if(argc < 3){
@@ -125,7 +125,6 @@ string handleCmd(int cmd, string arg){
 			return handleDownload(arg);
 	    		break;
 	  	case 1:
-	    		cout << "list";
 			return handleList(arg);
 	    		break;
 	  	case 2:
@@ -135,8 +134,7 @@ string handleCmd(int cmd, string arg){
 			return handleAdd(arg);
 	    		break;
 	  	case 5:
-	    		cout << "remove";
-			handleRemove(arg);
+			return handleRemove(arg);
 	    		break;
 	  	case 3:
 			return handleDelete(arg);
@@ -144,19 +142,3 @@ string handleCmd(int cmd, string arg){
 	}
 	return " ";
 }
-string handleDownload(string arg){
-	return t.retrieve(arg,Table::charAToStr(inet_ntoa(clientAddr.sin_addr),15));
-}
-string handleList(string arg){
-	return t.listFiles(arg);
-}
-string handleUpload(string arg){
-	return t.insert(arg);
-}
-string handleDelete(string arg){
-	return t.deleteFile(arg);
-}
-string handleAdd(string arg){	
-	return t.addDisk(arg);
-}
-string handleRemove(string arg){return "";}

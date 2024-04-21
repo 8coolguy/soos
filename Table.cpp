@@ -77,13 +77,21 @@ int Table::getDisk(int partition){
 	}
 	return -1;
 }
-void Table::scp(int src,int dst,string name){
+void Table::scp(int src,int dst,string name,string srcLoc){
 	vector<string> group = splitBy(name,"/");
 
 	string cmd = " \"mkdir /tmp/achoudhury2/"+group[0]+"\"";
 	string ip =  _user + "@"+_ipMap[dst];
-	string srcIp = _user + "@"+_ipMap[src]+":/tmp/achoudhury2/"+name;
+	//case if we deload disk and we don't have it in the ip map.
+	string srcIp;
+	cout << src << srcLoc << endl;
+	if(src==-1)
+		srcIp = _user + "@"+srcLoc+":/tmp/achoudhury2/"+name;
+	else
+		srcIp = _user + "@"+_ipMap[src]+":/tmp/achoudhury2/"+name;
 	string dstIp= ip+":/tmp/achoudhury2/"+group[0];
+	cout << ("ssh " +ip+" " + cmd) << endl;
+	cout << ("scp "+srcIp+" "+dstIp) << endl;
 	system(("ssh " +ip+" " + cmd).c_str());
 	system(("scp "+srcIp+" "+dstIp).c_str());
 
@@ -115,7 +123,7 @@ string Table::addDisk(string address){
 		int oldDiskLocation = _partitionTable.at(partition).first;
 		int oldBackupLocation = _partitionTable.at(partition).second;//add code to delete with backups 
 		if(oldDiskLocation!=newDiskLocation){
-			scp(oldDiskLocation,newDiskLocation,name);
+			scp(oldDiskLocation,newDiskLocation,name,"");
 			bufferMap.insert({partition,newDiskLocation});
 			res+=name+ " moved from "+to_string(oldDiskLocation)+" to " + to_string(newDiskLocation)+"\n";
 		}	
@@ -126,6 +134,7 @@ string Table::addDisk(string address){
 }
 
 string Table::rmDisk(int diskNumber){
+	string srcIp = _ipMap[diskNumber];
 	deloadDisk(diskNumber);
 	int n = getDiskCount();
 	vector<DiskDiv> buffer;
@@ -150,7 +159,24 @@ string Table::rmDisk(int diskNumber){
 	}
 	_diskTable = buffer;
 
-	return "Hello World";
+	string res = "Changes Made:\n";
+	map<int,int> bufferMap;
+	for(auto namePart: _nameMap){
+		string name = namePart.first;
+		int partition = getPartitionNumber(name);
+		int newDiskLocation = getDisk(partition);
+		if(newDiskLocation==-1) return "Something went wrong"; 
+		int oldDiskLocation = _partitionTable.at(partition).first;
+		int oldBackupLocation = _partitionTable.at(partition).second;//add code to delete with backups 
+		if(oldDiskLocation==diskNumber){
+			scp(-1,newDiskLocation,name,srcIp);
+			bufferMap.insert({partition,newDiskLocation});
+			res+=name+ " moved from "+to_string(oldDiskLocation)+" to " + to_string(newDiskLocation)+"\n";
+		}	
+	}
+	for(auto p: bufferMap) _partitionTable.at(p.first).first = p.second;
+	for(auto d: _diskTable) cout << d.start << " " << d.end << " " << d.disk << endl;
+	return res;
 }
 int Table::diskIpLookUp(string name,int*disk,string*ipLoc){
 	int partition = getPartitionNumber(name);
