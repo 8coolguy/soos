@@ -20,7 +20,7 @@ void createDirectory(char *argv[], int argc);
 void checkConnectionError(int *n);
 string handleCmd(int cmd, string arg);
 string handleDownload(string arg);
-void handleList(string arg);
+string handleList(string arg);
 string handleUpload(string arg);
 string handleDelete(string arg);
 void handleAdd(string arg);
@@ -126,7 +126,7 @@ string handleCmd(int cmd, string arg){
 	    		break;
 	  	case 1:
 	    		cout << "list";
-			handleList(arg);
+			return handleList(arg);
 	    		break;
 	  	case 2:
 			return handleUpload(arg);
@@ -151,7 +151,9 @@ string handleCmd(int cmd, string arg){
 string handleDownload(string arg){
 	return t.retrieve(arg,Table::charAToStr(inet_ntoa(clientAddr.sin_addr),15));
 }
-void handleList(string arg){}
+string handleList(string arg){
+	return t.listFiles(arg);
+}
 string handleUpload(string arg){
 	return t.insert(arg);
 }

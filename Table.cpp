@@ -187,6 +187,20 @@ string Table::deleteFile(string name){
 	system(("ssh " + ip1 + " " + cmd).c_str());	
 	return "Your file was deleted in Disk: "+to_string(disk)+" located at "+ ipLoc;
 }
+string Table::lsCmd(int disk,string group){
+	string res = "ssh "+ _user+"@"+_ipMap[disk] + " \"ls -lrt /tmp/achoudhury2/"+group+"\"";
+	if(system(res.c_str())!=0) return "No files\n";
+	return cmdOutput(res.c_str(),1);
+}
+string Table::listFiles(string name){
+	vector<int> disks =listDisk();
+	string res;
+	for(int disk : disks){
+		res+="*** Disk " +to_string(disk) +"@"+_ipMap[disk]+" ***\n";
+		res+=lsCmd(disk,name);
+	}
+	return res;
+}
 string Table::cmdOutput(string cmd,bool strip){
 	char buffer[1000];
 	FILE *fp;

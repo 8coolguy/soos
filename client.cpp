@@ -55,7 +55,7 @@ int main(int argc, char *argv[]){
 			system(("cat ~/Downloads/" + file).c_str());
 		}
 			
-		printf("\t%s\n",rbuf);
+		printf("%s\n",rbuf);
 	
 		if(n<0){
 			printf("Error reading\n");

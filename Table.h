@@ -38,6 +38,8 @@ public:
 	std::string insert(std::string name);
 	std::string retrieve(std::string name,std::string client);
 	std::string deleteFile(std::string name);
+	std::string lsCmd(int disk,std::string group);
+	std::string listFiles(std::string name);
 	static std::string cmdOutput(std::string cmd,bool strip);
 	static std::string charAToStr(char *arr,int n);
 	int getDiskCount();
