@@ -24,6 +24,7 @@ class Table{
 	std::vector<std::string> _ipMap;//vector where the index points to the Map location
 	std::vector<DiskDiv> _diskTable;
 	std::map<int,std::pair<int,int>> _partitionTable;
+	std::map<std::string,int> _nameMap;
 	
 public:
 	Table();
@@ -31,7 +32,9 @@ public:
 	int loadDisk(std::string address);
 	int getPartitionNumber(std::string name);
 	void allocateDisks();
-	void addDisk(std::string address);
+	int getDisk(int partition);
+	void scp(int src,int dst,std::string name);
+	std::string addDisk(std::string address);
 	void deloadDisk(int disk);
 	std::string rmDisk(int diskNumber);
 	int diskIpLookUp(std::string name,int*disk,std::string*ipLoc);

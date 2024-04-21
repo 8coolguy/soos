@@ -23,14 +23,15 @@ string handleDownload(string arg);
 string handleList(string arg);
 string handleUpload(string arg);
 string handleDelete(string arg);
-void handleAdd(string arg);
-void handleRemove(string arg);
+string handleAdd(string arg);
+string handleRemove(string arg);
 
 string USER;
 Table t;
 struct sockaddr_in servAddr, clientAddr;
+int port;
 int main(int argc, char *argv[]){
-
+	port = PORT;
 	if(argc < 3){
 		cout << "invlaid args" << endl;
 		exit(0);
@@ -46,7 +47,6 @@ int main(int argc, char *argv[]){
 	
 
 
-	cout << "Port: " << PORT << endl;//!need to make the port auto find
 	cout << "Partition Power " << partitionPower << endl;
 	cout << "Number of Available Disks " << numberOfAvailableDisks << endl;
 		
@@ -61,11 +61,11 @@ int main(int argc, char *argv[]){
 	servAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	
 	
-	if (bind(sockfd,(struct sockaddr*)&servAddr, sizeof(servAddr)) < 0){
-		perror("Failure to bind");
-		return 0;	
+	while(bind(sockfd,(struct sockaddr*)&servAddr, sizeof(servAddr)) != 0){
+		port = rand() % 2000 +4000;
+		servAddr.sin_port =htons(port);
 	}
-
+	cout << "Port: " << port << endl;//!need to make the port auto find
 	listen(sockfd,8);
 	int sin_size = sizeof(struct sockaddr_in);
 	while(1){
@@ -119,7 +119,7 @@ void createDirectory(char *argv[], int argc){
 	t.allocateDisks();
 }
 string handleCmd(int cmd, string arg){
-	cout << "CMD " << cmd << " Arg " << arg <<endl;
+	//cout << "CMD " << cmd << " Arg " << arg <<endl;
 	switch (cmd) {
 		case 0:
 			return handleDownload(arg);
@@ -132,8 +132,7 @@ string handleCmd(int cmd, string arg){
 			return handleUpload(arg);
 	    		break;
 	  	case 4:
-	    		cout << "add";
-			handleAdd(arg);
+			return handleAdd(arg);
 	    		break;
 	  	case 5:
 	    		cout << "remove";
@@ -145,9 +144,6 @@ string handleCmd(int cmd, string arg){
 	}
 	return " ";
 }
-
-
-
 string handleDownload(string arg){
 	return t.retrieve(arg,Table::charAToStr(inet_ntoa(clientAddr.sin_addr),15));
 }
@@ -160,5 +156,7 @@ string handleUpload(string arg){
 string handleDelete(string arg){
 	return t.deleteFile(arg);
 }
-void handleAdd(string arg){}
-void handleRemove(string arg){}
+string handleAdd(string arg){	
+	return t.addDisk(arg);
+}
+string handleRemove(string arg){return "";}

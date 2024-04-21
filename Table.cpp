@@ -33,7 +33,6 @@ Table::Table(){
 Table::Table(string user,int pp){
 	_pp = pp;
 	_user = user;
-	cout << _user << endl;
 }
 int Table::loadDisk(string address){
 	auto it  = find(_ipMap.begin(),_ipMap.end(),"");
@@ -70,7 +69,27 @@ void Table::allocateDisks(){
 	}
 	for(auto d: _diskTable) cout << d.start << " " << d.end << " " << d.disk << endl;
 }
-void Table::addDisk(string address){
+int Table::getDisk(int partition){
+	for(DiskDiv d: _diskTable){
+		if(d.start <= partition && partition <= d.end){//!bug double counted somewhere
+			return d.disk;
+		}
+	}
+	return -1;
+}
+void Table::scp(int src,int dst,string name){
+	vector<string> group = splitBy(name,"/");
+
+	string cmd = " \"mkdir /tmp/achoudhury2/"+group[0]+"\"";
+	string ip =  _user + "@"+_ipMap[dst];
+	string srcIp = _user + "@"+_ipMap[src]+":/tmp/achoudhury2/"+name;
+	string dstIp= ip+":/tmp/achoudhury2/"+group[0];
+	system(("ssh " +ip+" " + cmd).c_str());
+	system(("scp "+srcIp+" "+dstIp).c_str());
+
+}
+string Table::addDisk(string address){
+	system(("ssh "+ _user + "@" + address + " \"mkdir /tmp/achoudhury2\"").c_str());
 	int newDisk = loadDisk(address);
 	int n = getDiskCount();
 	vector<DiskDiv> buffer;
@@ -86,6 +105,24 @@ void Table::addDisk(string address){
 		buffer.push_back(newDiv);
 	}
 	for(auto d: buffer) _diskTable.push_back(d);
+	string res = "Changes Made:\n";
+	map<int,int> bufferMap;
+	for(auto namePart: _nameMap){
+		string name = namePart.first;
+		int partition = getPartitionNumber(name);
+		int newDiskLocation = getDisk(partition);
+		if(newDiskLocation==-1) return "Something went wrong"; 
+		int oldDiskLocation = _partitionTable.at(partition).first;
+		int oldBackupLocation = _partitionTable.at(partition).second;//add code to delete with backups 
+		if(oldDiskLocation!=newDiskLocation){
+			scp(oldDiskLocation,newDiskLocation,name);
+			bufferMap.insert({partition,newDiskLocation});
+			res+=name+ " moved from "+to_string(oldDiskLocation)+" to " + to_string(newDiskLocation)+"\n";
+		}	
+	}
+	for(auto p: bufferMap) _partitionTable.at(p.first).first = p.second;
+	for(auto d: _diskTable) cout << d.start << " " << d.end << " " << d.disk << endl;
+	return res;
 }
 
 string Table::rmDisk(int diskNumber){
@@ -129,6 +166,7 @@ string Table::insert(string name){
 	int partition = getPartitionNumber(name);
 	vector<string> groupObjPair = splitBy(name,"/");
 	if(groupObjPair.size()!=2) return "Argument needs to be divided by slash";
+	_nameMap.insert({name,partition });
 	//check if already in table
 	for(DiskDiv d: _diskTable){
 		if(d.start <= partition && partition <= d.end){//!bug double counted somewhere
@@ -198,11 +236,13 @@ string Table::listFiles(string name){
 	for(int disk : disks){
 		res+="*** Disk " +to_string(disk) +"@"+_ipMap[disk]+" ***\n";
 		res+=lsCmd(disk,name);
+		res+="\n";
 	}
 	return res;
 }
 string Table::cmdOutput(string cmd,bool strip){
 	char buffer[1000];
+	fill(buffer, buffer+1000, 0);
 	FILE *fp;
 	if((fp= popen(cmd.c_str(),"r")) == NULL) {
 		cout << "There is an error" << endl;
@@ -223,8 +263,6 @@ string Table::charAToStr(char *arr,int n){
 }
 int Table::getDiskCount(){
 	int count = 0;
-	for(auto s :_ipMap) cout << s;
-	cout << endl;
 	for (auto s : _ipMap)
 		if(s!="") count+=1;
 	return count;	
