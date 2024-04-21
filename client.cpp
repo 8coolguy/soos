@@ -44,7 +44,6 @@ int main(int argc, char *argv[]){
 	sockfd=connectToServer(argv,sockfd,host,&servAddr);
 	
 	while(1){
-		cout << "Waiting for cmd..." <<endl;	
 		bzero(rbuf,sizeof(rbuf));
 		handleClientInput(sockfd);
 
@@ -57,8 +56,8 @@ int main(int argc, char *argv[]){
 			
 		printf("%s\n",rbuf);
 	
-		if(n<0){
-			printf("Error reading\n");
+		if(n<=0){
+			printf("Error reading or disconnect\n");
 			return 0;
 		}
 	}
@@ -83,16 +82,8 @@ int connectToServer(char *argv[], int sockfd, struct hostent *host, struct socka
 	}
 	return sockfd;
 }
-vector<string> split(string sentence){
-	stringstream words(sentence);
-	string word;
-	vector<string> res;
-	while (getline(words, word, ' ')) res.push_back(word);
-	return res;
-}
 //send cmd and argument to server
 void execute(int cmd,string arg,int sockfd){
-	cout << "CMD " << cmd << " ARG " <<arg <<endl;
 	if(cmd==2)
 		upload(arg);
 	char buf[1000];
@@ -106,35 +97,39 @@ void execute(int cmd,string arg,int sockfd){
 		file=Table::splitBy(arg,"/")[1];
 	}
 }
+int argType(string arg){
+	vector<string> groupObjPair = Table::splitBy(arg,"/");
+	return groupObjPair.size();
+}
 void handleClientInput(int connfd){
+	cout << "Waiting for cmd..." <<endl;	
 	string input;
 	getline(cin, input);
-	vector<string> cmdAndArg =split(input);
+	vector<string> cmdAndArg =Table::splitBy(input," ");
 	string cmd =cmdAndArg[0]; 
 	string arg;
 	if(cmdAndArg.size()>1)
 		arg=cmdAndArg[1];
-	if(cmd=="download")
+	cout << cmd << " " <<  arg <<endl;
+	if(cmd=="download" && argType(arg)==2)
 		execute(0,arg,connfd);
-	else if(cmd=="list")
+	else if(cmd=="list" && arg.size())
 		execute(1,arg,connfd);
-	else if(cmd=="upload")
+	else if(cmd=="upload" && argType(arg)==2)
 		execute(2,arg,connfd);
-	else if(cmd=="delete")
+	else if(cmd=="delete" && argType(arg)==2)
 		execute(3,arg,connfd);
-	else if(cmd=="add")
+	else if(cmd=="add" && arg.size())
 		execute(4,arg,connfd);
-	else if(cmd=="remove")
+	else if(cmd=="remove" && arg.size())
 		execute(5,arg,connfd);
-	else
+	else{
 		cout << HELP << endl;
+		handleClientInput(connfd);
+	}
 }
 void upload(string arg){
 	vector<string> groupObjPair = Table::splitBy(arg,"/");
-	if(groupObjPair.size()!=2){
-		cout << "Invalid Instruction" << endl;
-		exit(0);
-	}
-	cout << ("scp " + CWD +"/" + groupObjPair[1] +" "+ USER+"@"+SERVER+ ":/tmp/achoudhury2/work") << endl;
-	system(("scp " + CWD +"/" + groupObjPair[1] +" "+ USER+"@"+SERVER+ ":/tmp/achoudhury2/work").c_str());
+	cout << ("scp " + CWD +"/" + groupObjPair[1] +" "+ USER+"@"+SERVER+ ":/tmp/achoudhury2Server") << endl;
+	system(("scp " + CWD +"/" + groupObjPair[1] +" "+ USER+"@"+SERVER+ ":/tmp/achoudhury2Server").c_str());
 }

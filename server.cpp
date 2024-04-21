@@ -22,7 +22,7 @@ struct sockaddr_in servAddr, clientAddr;
 int port;
 
 void createDirectory(char *argv[], int argc);
-void checkConnectionError(int *n);
+void checkConnectionError(int n);
 string handleCmd(int cmd, string arg);
 string handleDownload(string arg){return t.retrieve(arg,Table::charAToStr(inet_ntoa(clientAddr.sin_addr),15));}
 string handleList(string arg){return t.listFiles(arg);}
@@ -45,12 +45,6 @@ int main(int argc, char *argv[]){
 	t = Table(USER,partitionPower);
 	createDirectory(argv,argc);
 	
-
-
-	cout << "Partition Power " << partitionPower << endl;
-	cout << "Number of Available Disks " << numberOfAvailableDisks << endl;
-		
-
 	if((sockfd = socket(AF_INET, SOCK_STREAM,0)) < 0){	
 		perror("cannot create socket");
 		return 0;
@@ -78,42 +72,43 @@ int main(int argc, char *argv[]){
 		printf("Connection Established with client: IP %s and Port %d\n",inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
 		
 	while(1){
+			//cmd	
 			cout << "Waiting for Request..." << endl;
 			bzero(rbuf,sizeof(rbuf));
 			n = recv(connfd, rbuf, sizeof(rbuf),0);
-			checkConnectionError(&n);
+			checkConnectionError(n);
+			if(n==0) break;			
 			int cmd = rbuf[0] - '0';
-						
+			
+			//arg		
 			bzero(rbuf,sizeof(rbuf));
 			n = recv(connfd, rbuf, sizeof(rbuf),0);
-			checkConnectionError(&n);
+			checkConnectionError(n);
+			if(n==0) break;			
 
-			string res = handleCmd(cmd,Table::charAToStr(rbuf,1000));
-			
+			//response
+			string res = handleCmd(cmd,Table::charAToStr(rbuf,1000));	
 			bzero(rbuf,sizeof(rbuf));
 			for(int i=0;i<res.length();i++)rbuf[i]=res[i];
-			send(connfd, &rbuf, sizeof(rbuf),0);
-			
+			n = send(connfd, &rbuf, sizeof(rbuf),0);
+			if(n==0) break;			
 		}
 	}
-	close(sockfd);		
-	return 0;
 }
-void checkConnectionError(int *n){
-	if(*n<=0){
+void checkConnectionError(int n){
+	if(n<0){
 		printf("Error reading\n");
 		exit(0);
 	}
-	*n=0;
 }
 void createDirectory(char *argv[], int argc){
-
-	system(("mkdir /tmp/"+ USER).c_str());
-	system(("mkdir /tmp/" + USER + "/work").c_str());
+	system("rm -rf /tmp/achoudhury2Server");
+	system("mkdir /tmp/achoudhury2Server/");
 
 	for(int i = 2; i<argc; i++){
 		string ip = Table::charAToStr(argv[i],15);
 		t.loadDisk(ip);
+		system(("ssh "+ USER + "@" + ip + " \"rm -rf /tmp/achoudhury2\"").c_str());
 		system(("ssh "+ USER + "@" + ip + " \"mkdir /tmp/achoudhury2\"").c_str());
 	}
 	t.allocateDisks();

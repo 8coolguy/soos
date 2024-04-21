@@ -207,7 +207,7 @@ string Table::insert(string name){
 
 	string ip =_user + "@"+ ipLoc;//!implement code for backup if first drive fails
 	string cmd = " \"mkdir /tmp/achoudhury2/"+groupObjPair[0]+"\"";
-	string src = "/tmp/achoudhury2/work/"+groupObjPair[1];
+	string src = "/tmp/achoudhury2Server/"+groupObjPair[1];
 	string dst = ":/tmp/achoudhury2/"+groupObjPair[0];
 	cout << ("ssh " + ip + cmd) <<endl;
 	cout << ("scp " + src + " " + ip+ dst) << endl;	
