@@ -11,6 +11,8 @@
 # include <string>
 # include <vector>
 # include <map>
+# include <mutex>
+# include <thread>
 
 struct DiskDiv{
 	int start;
@@ -25,10 +27,12 @@ class Table{
 	std::vector<DiskDiv> _diskTable;
 	std::map<int,std::pair<int,int>> _partitionTable;
 	std::map<std::string,int> _nameMap;
+	std::recursive_mutex _mutex;
 	
 public:
 	Table();
 	Table(std::string user,int pp);
+	void init(std::string user,int pp);
 	int loadDisk(std::string address);
 	int getPartitionNumber(std::string name);
 	void allocateDisks();

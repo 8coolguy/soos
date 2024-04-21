@@ -21,6 +21,7 @@
 # include <string>
 # include <unistd.h>
 # include <vector>
+# include <mutex>
 # include "Table.h"
 
 using namespace std;
@@ -34,7 +35,12 @@ Table::Table(string user,int pp){
 	_pp = pp;
 	_user = user;
 }
+void Table::init(std::string user,int pp){
+	_pp = pp;
+	_user = user;
+}
 int Table::loadDisk(string address){
+	lock_guard<recursive_mutex> lock (_mutex);
 	auto it  = find(_ipMap.begin(),_ipMap.end(),"");
 	if(it==_ipMap.end()){
 		_ipMap.push_back(address);
@@ -46,6 +52,7 @@ int Table::loadDisk(string address){
 	}	
 }
 void Table::deloadDisk(int disk){
+	lock_guard<recursive_mutex> lock (_mutex);
 	_ipMap[disk] = "";
 }
 
@@ -70,6 +77,7 @@ void Table::allocateDisks(){
 	for(auto d: _diskTable) cout << d.start << " " << d.end << " " << d.disk << endl;
 }
 int Table::getDisk(int partition){
+	lock_guard<recursive_mutex> lock (_mutex);
 	for(DiskDiv d: _diskTable){
 		if(d.start <= partition && partition <= d.end){//!bug double counted somewhere
 			return d.disk;
@@ -78,6 +86,7 @@ int Table::getDisk(int partition){
 	return -1;
 }
 void Table::scp(int src,int dst,string name,string srcLoc){
+	lock_guard<recursive_mutex> lock (_mutex);
 	vector<string> group = splitBy(name,"/");
 
 	string cmd = " \"mkdir /tmp/achoudhury2/"+group[0]+"\"";
@@ -97,6 +106,7 @@ void Table::scp(int src,int dst,string name,string srcLoc){
 
 }
 string Table::addDisk(string address){
+	lock_guard<recursive_mutex> lock (_mutex);
 	system(("ssh "+ _user + "@" + address + " \"mkdir /tmp/achoudhury2\"").c_str());
 	int newDisk = loadDisk(address);
 	int n = getDiskCount();
@@ -134,6 +144,7 @@ string Table::addDisk(string address){
 }
 
 string Table::rmDisk(int diskNumber){
+	lock_guard<recursive_mutex> lock (_mutex);
 	string srcIp = _ipMap[diskNumber];
 	deloadDisk(diskNumber);
 	int n = getDiskCount();
@@ -179,6 +190,7 @@ string Table::rmDisk(int diskNumber){
 	return res;
 }
 int Table::diskIpLookUp(string name,int*disk,string*ipLoc){
+	lock_guard<recursive_mutex> lock (_mutex);
 	int partition = getPartitionNumber(name);
 	try{
 		*disk = _partitionTable.at(partition).first;
@@ -189,6 +201,7 @@ int Table::diskIpLookUp(string name,int*disk,string*ipLoc){
 	}
 }
 string Table::insert(string name){
+	lock_guard<recursive_mutex> lock (_mutex);
 	int partition = getPartitionNumber(name);
 	vector<string> groupObjPair = splitBy(name,"/");
 	if(groupObjPair.size()!=2) return "Argument needs to be divided by slash";
@@ -216,6 +229,7 @@ string Table::insert(string name){
 	return "Your file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc;
 }
 string Table::retrieve(string name,string client){
+	lock_guard<recursive_mutex> lock (_mutex);
 	int partition = getPartitionNumber(name);
 	vector<string> groupObjPair = splitBy(name,"/");
 	if(groupObjPair.size()!=2) return "Argument needs to be divided by slash";
@@ -234,8 +248,10 @@ string Table::retrieve(string name,string client){
 	return "Your file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc + " Saved to your ~/Downloads/ folder.";
 }
 string Table::deleteFile(string name){
+	lock_guard<recursive_mutex> lock (_mutex);
 	int partition = getPartitionNumber(name);
 	vector<string> groupObjPair = splitBy(name,"/");
+	_nameMap.erase(name);
 	if(groupObjPair.size()!=2) return "Argument needs to be divided by slash";
 
 	int disk;
@@ -252,11 +268,13 @@ string Table::deleteFile(string name){
 	return "Your file was deleted in Disk: "+to_string(disk)+" located at "+ ipLoc;
 }
 string Table::lsCmd(int disk,string group){
+	lock_guard<recursive_mutex> lock (_mutex);
 	string res = "ssh "+ _user+"@"+_ipMap[disk] + " \"ls -lrt /tmp/achoudhury2/"+group+"\"";
-	if(system(res.c_str())!=0) return "No files\n";
+	if(system(res.c_str())!=0) return "No group\n";
 	return cmdOutput(res.c_str(),1);
 }
 string Table::listFiles(string name){
+	lock_guard<recursive_mutex> lock (_mutex);
 	vector<int> disks =listDisk();
 	string res;
 	for(int disk : disks){
@@ -288,6 +306,7 @@ string Table::charAToStr(char *arr,int n){
 	return res;
 }
 int Table::getDiskCount(){
+	lock_guard<recursive_mutex> lock (_mutex);
 	int count = 0;
 	for (auto s : _ipMap)
 		if(s!="") count+=1;
@@ -303,6 +322,8 @@ int Table::myPow(int x, unsigned int p)
   else return x * tmp * tmp;
 }
 vector<int> Table::listDisk(){
+	lock_guard<recursive_mutex> lock (_mutex);
+	cout << "Hello " <<endl;
 	vector<int> res;
 	for(int i =0;i<_ipMap.size();i++)
 		if(_ipMap[i]!="") res.push_back(i);
@@ -321,6 +342,7 @@ vector<string> Table::splitBy(string s, string d){
 	return res;
 }
 int Table::nextDisk(int i){
+	lock_guard<recursive_mutex> lock (_mutex);
 	vector<int> disks = listDisk();
 	auto it	= find(disks.begin(),disks.end(),i);
 	int index = it - disks.begin(); 

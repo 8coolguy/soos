@@ -1,4 +1,5 @@
 #define PORT 6000
+#define MAXT 5
 
 #include<iostream>
 #include<string>
@@ -12,19 +13,18 @@
 #include<cstdlib>
 #include<cstdio>
 #include<fstream>
+#include<thread>
 #include"Table.h"
 
 using namespace std;
 
 string USER;
-Table t;
-struct sockaddr_in servAddr, clientAddr;
 int port;
+Table t;
 
 void createDirectory(char *argv[], int argc);
-void checkConnectionError(int n);
-string handleCmd(int cmd, string arg);
-string handleDownload(string arg){return t.retrieve(arg,Table::charAToStr(inet_ntoa(clientAddr.sin_addr),15));}
+void handleRequests(int connfd,string ip);
+string handleDownload(string arg,string ip){return t.retrieve(arg,ip);}
 string handleList(string arg){return t.listFiles(arg);}
 string handleUpload(string arg){return t.insert(arg);}
 string handleDelete(string arg){return t.deleteFile(arg);}
@@ -37,14 +37,14 @@ int main(int argc, char *argv[]){
 		exit(0);
 	}	
 
-	char rbuf[1000];
 	int numberOfAvailableDisks = argc - 2;
 	int partitionPower = stoi(argv[1]);
-	int n,sockfd,connfd;
-	USER = Table::cmdOutput("/bin/whoami",true);	
-	t = Table(USER,partitionPower);
-	createDirectory(argv,argc);
+	struct sockaddr_in servAddr, clientAddr;
+	int sockfd,connfd;
 	
+	USER = Table::cmdOutput("/bin/whoami",true);	
+	t.init(USER,partitionPower);
+	createDirectory(argv,argc);
 	if((sockfd = socket(AF_INET, SOCK_STREAM,0)) < 0){	
 		perror("cannot create socket");
 		return 0;
@@ -59,10 +59,13 @@ int main(int argc, char *argv[]){
 		port = rand() % 2000 +4000;
 		servAddr.sin_port =htons(port);
 	}
-	cout << "Port: " << port << endl;//!need to make the port auto find
+	cout << "Port: " << port << endl;
 	listen(sockfd,8);
 	int sin_size = sizeof(struct sockaddr_in);
-	while(1){
+	int threadCount = 0;
+	vector<thread> threads(MAXT);
+	vector<string> clients(MAXT);
+	while(threadCount < MAXT){
 		printf("Waiting for connection\n");
 		if((connfd = accept(sockfd, (struct sockaddr*)&clientAddr, (socklen_t *)&sin_size)) < 0){
 			perror("Failure to accept the client connection\n");
@@ -70,41 +73,18 @@ int main(int argc, char *argv[]){
 		}
 	
 		printf("Connection Established with client: IP %s and Port %d\n",inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
+		clients[threadCount] = Table::charAToStr(inet_ntoa(clientAddr.sin_addr),15);
+		thread t(handleRequests,connfd,clients[threadCount]);
+		threads[threadCount].swap(t);
+		threadCount++;
 		
-	while(1){
-			//cmd	
-			cout << "Waiting for Request..." << endl;
-			bzero(rbuf,sizeof(rbuf));
-			n = recv(connfd, rbuf, sizeof(rbuf),0);
-			checkConnectionError(n);
-			if(n==0) break;			
-			int cmd = rbuf[0] - '0';
-			
-			//arg		
-			bzero(rbuf,sizeof(rbuf));
-			n = recv(connfd, rbuf, sizeof(rbuf),0);
-			checkConnectionError(n);
-			if(n==0) break;			
-
-			//response
-			string res = handleCmd(cmd,Table::charAToStr(rbuf,1000));	
-			bzero(rbuf,sizeof(rbuf));
-			for(int i=0;i<res.length();i++)rbuf[i]=res[i];
-			n = send(connfd, &rbuf, sizeof(rbuf),0);
-			if(n==0) break;			
-		}
 	}
-}
-void checkConnectionError(int n){
-	if(n<0){
-		printf("Error reading\n");
-		exit(0);
-	}
+	for(int i =0; i<MAXT;i++)
+		threads[i].join();
 }
 void createDirectory(char *argv[], int argc){
 	system("rm -rf /tmp/achoudhury2Server");
 	system("mkdir /tmp/achoudhury2Server/");
-
 	for(int i = 2; i<argc; i++){
 		string ip = Table::charAToStr(argv[i],15);
 		t.loadDisk(ip);
@@ -113,11 +93,11 @@ void createDirectory(char *argv[], int argc){
 	}
 	t.allocateDisks();
 }
-string handleCmd(int cmd, string arg){
-	//cout << "CMD " << cmd << " Arg " << arg <<endl;
+string handleCmd(int cmd, string arg,string ip){
+	cout << "CMD " << cmd << " Arg " << arg <<endl;
 	switch (cmd) {
 		case 0:
-			return handleDownload(arg);
+			return handleDownload(arg,ip);
 	    		break;
 	  	case 1:
 			return handleList(arg);
@@ -136,4 +116,32 @@ string handleCmd(int cmd, string arg){
 	    		break;
 	}
 	return " ";
+}
+
+void handleRequests(int connfd,string ip){
+	int n;
+	char rbuf[1000];
+	while(1){
+		//cmd	
+		cout << "Waiting for Request..." << endl;
+		bzero(rbuf,sizeof(rbuf));
+		n = recv(connfd, rbuf, sizeof(rbuf),0);
+		if(n<0){ printf("Error reading\n"); exit(0);}
+		if(n==0) break;			
+		int cmd = rbuf[0] - '0';
+		
+		//arg		
+		bzero(rbuf,sizeof(rbuf));
+		n = recv(connfd, rbuf, sizeof(rbuf),0);
+		if(n<0){ printf("Error reading\n"); exit(0);}
+		if(n==0) break;			
+
+		//response
+		string res = handleCmd(cmd,Table::charAToStr(rbuf,1000),ip);	
+		bzero(rbuf,sizeof(rbuf));
+		for(int i=0;i<res.length();i++)rbuf[i]=res[i];
+		n = send(connfd, &rbuf, sizeof(rbuf),0);
+		if(n<0){ printf("Error reading\n"); exit(0);}
+		if(n==0) break;			
+	}
 }

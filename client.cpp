@@ -110,7 +110,6 @@ void handleClientInput(int connfd){
 	string arg;
 	if(cmdAndArg.size()>1)
 		arg=cmdAndArg[1];
-	cout << cmd << " " <<  arg <<endl;
 	if(cmd=="download" && argType(arg)==2)
 		execute(0,arg,connfd);
 	else if(cmd=="list" && arg.size())
