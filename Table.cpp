@@ -172,6 +172,7 @@ string Table::rmDisk(int diskNumber){
 
 	string res = "Changes Made:\n";
 	map<int,int> bufferMap;
+	map<int,int> bbufferMap;
 	for(auto namePart: _nameMap){
 		string name = namePart.first;
 		int partition = getPartitionNumber(name);
@@ -184,17 +185,26 @@ string Table::rmDisk(int diskNumber){
 			bufferMap.insert({partition,newDiskLocation});
 			res+=name+ " moved from "+to_string(oldDiskLocation)+" to " + to_string(newDiskLocation)+"\n";
 		}	
+		if(oldBackupLocation ==diskNumber){
+			int newBackUpLocation = nextDisk(newDiskLocation);
+			scp(-1,newBackUpLocation,name,srcIp);
+			bbufferMap.insert({partition,newBackUpLocation});
+			res+="Backup "+name+ " moved from "+to_string(oldBackupLocation)+" to " + to_string(newBackUpLocation)+"\n";
+		}	
 	}
 	for(auto p: bufferMap) _partitionTable.at(p.first).first = p.second;
+	for(auto p: bbufferMap) _partitionTable.at(p.first).second= p.second;
 	for(auto d: _diskTable) cout << d.start << " " << d.end << " " << d.disk << endl;
 	return res;
 }
-int Table::diskIpLookUp(string name,int*disk,string*ipLoc){
+int Table::diskIpLookUp(string name,int*disk,string*ipLoc,int *back,string *backLoc){
 	lock_guard<recursive_mutex> lock (_mutex);
 	int partition = getPartitionNumber(name);
 	try{
 		*disk = _partitionTable.at(partition).first;
+		*back = _partitionTable.at(partition).second;
 		*ipLoc = _ipMap[*disk];
+		*backLoc = _ipMap[*back];
 		return 0;
 	} catch(...){
 		return 1;
@@ -206,27 +216,27 @@ string Table::insert(string name){
 	vector<string> groupObjPair = splitBy(name,"/");
 	if(groupObjPair.size()!=2) return "Argument needs to be divided by slash";
 	_nameMap.insert({name,partition });
-	//check if already in table
-	for(DiskDiv d: _diskTable){
-		if(d.start <= partition && partition <= d.end){//!bug double counted somewhere
-			_partitionTable.insert({partition, make_pair(d.disk,nextDisk(d.disk)) });
-			break;
-		}
-	}
 	
-	int disk;
-	string ipLoc;	
-	if(diskIpLookUp(name,&disk,&ipLoc)) return "Group/File Likely does not exist";
+	int disk = getDisk(partition);
+	int backup = nextDisk(disk);
+	_partitionTable.insert({partition, make_pair(disk,backup) });
 
-	string ip =_user + "@"+ ipLoc;//!implement code for backup if first drive fails
+	string ipLoc = _ipMap[disk];
+	string backLoc = _ipMap[backup];
+
+	string ip1 =_user + "@"+ ipLoc;
+	string ip2 =_user + "@"+ backLoc;
+
 	string cmd = " \"mkdir /tmp/achoudhury2/"+groupObjPair[0]+"\"";
 	string src = "/tmp/achoudhury2Server/"+groupObjPair[1];
 	string dst = ":/tmp/achoudhury2/"+groupObjPair[0];
-	cout << ("ssh " + ip + cmd) <<endl;
-	cout << ("scp " + src + " " + ip+ dst) << endl;	
-	system(("ssh " + ip + cmd).c_str());
-	system(("scp " + src + " " + ip+ dst).c_str());	
-	return "Your file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc;
+	
+	system(("ssh " + ip1 + cmd).c_str());
+	system(("scp " + src + " " + ip1+ dst).c_str());	
+	//save to backup	
+	system(("ssh " + ip2 + cmd).c_str());
+	system(("scp " + src + " " + ip2+ dst).c_str());	
+	return "Your file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc +" and your file was saved in Disk: "+to_string(backup)+" located at "+ backLoc;
 }
 string Table::retrieve(string name,string client){
 	lock_guard<recursive_mutex> lock (_mutex);
@@ -235,37 +245,48 @@ string Table::retrieve(string name,string client){
 	if(groupObjPair.size()!=2) return "Argument needs to be divided by slash";
 
 	int disk;
+	int back;
 	string ipLoc;	
-	if(diskIpLookUp(name,&disk,&ipLoc)) return "Group/File Likely does not exist";
+	string backLoc;
+	if(diskIpLookUp(name,&disk,&ipLoc,&back,&backLoc)) return "Group/File Likely does not exist";
 	
 	string ip1 =_user + "@"+ ipLoc;
+	string backUpIp =_user + "@"+ backLoc;
 	string src = ip1+ ":/tmp/achoudhury2/"+name;
+	string backUpSrc = backUpIp+ ":/tmp/achoudhury2/"+name;
 	string ip2 =_user + "@"+ client;
 	string dst = ip2+ ":~/Downloads/";
 
 	cout << ("scp " + src +" "+ dst) << endl;		
-	system(("scp " + src + " " + dst).c_str());	
-	return "Your file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc + " Saved to your ~/Downloads/ folder.";
+	if(system(("scp " + src + " " + dst).c_str())==0)
+		return "Your file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc + " Saved to your ~/Downloads/ folder.";
+	if(system(("scp " + backUpSrc + " " + dst).c_str())==0)
+		return "Your Backup file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc + " Saved to your ~/Downloads/ folder.";
+	return "Both Disks were corrupted";
 }
 string Table::deleteFile(string name){
 	lock_guard<recursive_mutex> lock (_mutex);
-	int partition = getPartitionNumber(name);
+	int partition = _nameMap[name];
 	vector<string> groupObjPair = splitBy(name,"/");
 	_nameMap.erase(name);
 	if(groupObjPair.size()!=2) return "Argument needs to be divided by slash";
 
 	int disk;
+	int back;
 	string ipLoc;	
-	if(diskIpLookUp(name,&disk,&ipLoc)) return "Group/File Likely does not exist";
+	string backLoc;
+	if(diskIpLookUp(name,&disk,&ipLoc,&back,&backLoc)) return "Group/File Likely does not exist";
 
-	_partitionTable.erase(partition);	
+	//_partitionTable.erase(partition);	
 
 	string ip1 =_user + "@"+ ipLoc;
 	string cmd = "\"rm /tmp/achoudhury2/" +name +"\"";
+
+	string ip2 =_user + "@"+ backLoc;
 	
-	cout << ("ssh " + ip1 + " " + cmd)<< endl;		
 	system(("ssh " + ip1 + " " + cmd).c_str());	
-	return "Your file was deleted in Disk: "+to_string(disk)+" located at "+ ipLoc;
+	system(("ssh " + ip2 + " " + cmd).c_str());	
+	return "Your file was deleted in Disk: "+to_string(disk)+" located at "+ ipLoc +" and your file was deleted in Disk: "+to_string(back)+" located at "+ backLoc;
 }
 string Table::lsCmd(int disk,string group){
 	lock_guard<recursive_mutex> lock (_mutex);

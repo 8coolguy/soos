@@ -94,7 +94,7 @@ void createDirectory(char *argv[], int argc){
 	t.allocateDisks();
 }
 string handleCmd(int cmd, string arg,string ip){
-	cout << "CMD " << cmd << " Arg " << arg <<endl;
+	cout << "CMD " << cmd << " Arg " << arg << "IP" << ip <<endl;
 	switch (cmd) {
 		case 0:
 			return handleDownload(arg,ip);

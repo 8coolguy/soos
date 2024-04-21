@@ -41,7 +41,7 @@ public:
 	std::string addDisk(std::string address);
 	void deloadDisk(int disk);
 	std::string rmDisk(int diskNumber);
-	int diskIpLookUp(std::string name,int*disk,std::string*ipLoc);
+	int diskIpLookUp(std::string name,int*disk,std::string*ipLoc,int*back,std::string*backLoc);
 	std::string insert(std::string name);
 	std::string retrieve(std::string name,std::string client);
 	std::string deleteFile(std::string name);
