@@ -29,7 +29,7 @@ string handleList(string arg){return t.listFiles(arg);}
 string handleUpload(string arg){return t.insert(arg);}
 string handleDelete(string arg){return t.deleteFile(arg);}
 string handleAdd(string arg){return t.addDisk(arg);}
-string handleRemove(string arg){return t.rmDisk(stoi(arg));}
+string handleRemove(string arg){return t.rmDisk(arg);}
 int main(int argc, char *argv[]){
 	port = PORT;
 	if(argc < 3){
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]){
 		}
 	
 		printf("Connection Established with client: IP %s and Port %d\n",inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
-		clients[threadCount] = Table::charAToStr(inet_ntoa(clientAddr.sin_addr),15);
+		clients[threadCount] = Table::charAToStr(inet_ntoa(clientAddr.sin_addr),100);
 		thread t(handleRequests,connfd,clients[threadCount]);
 		threads[threadCount].swap(t);
 		threadCount++;
@@ -86,7 +86,7 @@ void createDirectory(char *argv[], int argc){
 	system("rm -rf /tmp/achoudhury2Server");
 	system("mkdir /tmp/achoudhury2Server/");
 	for(int i = 2; i<argc; i++){
-		string ip = Table::charAToStr(argv[i],15);
+		string ip = Table::charAToStr(argv[i],100);
 		t.loadDisk(ip);
 		system(("ssh "+ USER + "@" + ip + " \"rm -rf /tmp/achoudhury2\"").c_str());
 		system(("ssh "+ USER + "@" + ip + " \"mkdir /tmp/achoudhury2\"").c_str());
@@ -94,7 +94,6 @@ void createDirectory(char *argv[], int argc){
 	t.allocateDisks();
 }
 string handleCmd(int cmd, string arg,string ip){
-	cout << "CMD " << cmd << " Arg " << arg << "IP" << ip <<endl;
 	switch (cmd) {
 		case 0:
 			return handleDownload(arg,ip);
@@ -137,7 +136,8 @@ void handleRequests(int connfd,string ip){
 		if(n==0) break;			
 
 		//response
-		string res = handleCmd(cmd,Table::charAToStr(rbuf,1000),ip);	
+		string res = handleCmd(cmd,Table::charAToStr(rbuf,1000),ip);
+		cout << res << endl;
 		bzero(rbuf,sizeof(rbuf));
 		for(int i=0;i<res.length();i++)rbuf[i]=res[i];
 		n = send(connfd, &rbuf, sizeof(rbuf),0);

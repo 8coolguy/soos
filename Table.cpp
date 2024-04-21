@@ -93,17 +93,18 @@ void Table::scp(int src,int dst,string name,string srcLoc){
 	string ip =  _user + "@"+_ipMap[dst];
 	//case if we deload disk and we don't have it in the ip map.
 	string srcIp;
-	cout << src << srcLoc << endl;
-	if(src==-1)
-		srcIp = _user + "@"+srcLoc+":/tmp/achoudhury2/"+name;
-	else
-		srcIp = _user + "@"+_ipMap[src]+":/tmp/achoudhury2/"+name;
-	string dstIp= ip+":/tmp/achoudhury2/"+group[0];
-	cout << ("ssh " +ip+" " + cmd) << endl;
-	cout << ("scp "+srcIp+" "+dstIp) << endl;
-	system(("ssh " +ip+" " + cmd).c_str());
-	system(("scp "+srcIp+" "+dstIp).c_str());
 
+	string dir = "/tmp/achoudhury2/"+name;
+	
+	if(src==-1)
+		srcIp = _user + "@"+srcLoc;
+	else
+		srcIp = _user + "@"+_ipMap[src];
+	string srcIpF = srcIp +":"+dir;
+	string dstIp= ip+":/tmp/achoudhury2/"+group[0];
+	system(("ssh " +ip+" " + cmd).c_str());
+	system(("scp "+srcIpF+" "+dstIp).c_str());
+	system(("ssh " + srcIp +" \"rm " + dir+" \"").c_str());
 }
 string Table::addDisk(string address){
 	lock_guard<recursive_mutex> lock (_mutex);
@@ -143,8 +144,12 @@ string Table::addDisk(string address){
 	return res;
 }
 
-string Table::rmDisk(int diskNumber){
+string Table::rmDisk(string address){
 	lock_guard<recursive_mutex> lock (_mutex);
+	auto it = find(_ipMap.begin(),_ipMap.end(),address);
+	if(it == _ipMap.end()) return "Disk not found";
+	int diskNumber = it - _ipMap.begin(); 
+		
 	string srcIp = _ipMap[diskNumber];
 	deloadDisk(diskNumber);
 	int n = getDiskCount();
@@ -257,7 +262,7 @@ string Table::retrieve(string name,string client){
 	string ip2 =_user + "@"+ client;
 	string dst = ip2+ ":~/Downloads/";
 
-	cout << ("scp " + src +" "+ dst) << endl;		
+	//cout << ("scp " + src +" "+ dst) << endl;		
 	if(system(("scp " + src + " " + dst).c_str())==0)
 		return "Your file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc + " Saved to your ~/Downloads/ folder.";
 	if(system(("scp " + backUpSrc + " " + dst).c_str())==0)
@@ -344,7 +349,7 @@ int Table::myPow(int x, unsigned int p)
 }
 vector<int> Table::listDisk(){
 	lock_guard<recursive_mutex> lock (_mutex);
-	cout << "Hello " <<endl;
+	//cout << "Hello " <<endl;
 	vector<int> res;
 	for(int i =0;i<_ipMap.size();i++)
 		if(_ipMap[i]!="") res.push_back(i);

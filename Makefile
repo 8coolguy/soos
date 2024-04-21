@@ -4,9 +4,3 @@ compile:
 clean:
 	rm client.o
 	rm server.o
-	rm test.o
-
-test:
-	#g++ -std=c++11 test.cpp Table.cpp -o test.o -lboost_system -lboost_filesystem
-	g++ test2.cpp -o test.o -std=c++11 -pthread
-

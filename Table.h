@@ -40,7 +40,7 @@ public:
 	void scp(int src,int dst,std::string name,std::string srcLoc);
 	std::string addDisk(std::string address);
 	void deloadDisk(int disk);
-	std::string rmDisk(int diskNumber);
+	std::string rmDisk(std::string address);
 	int diskIpLookUp(std::string name,int*disk,std::string*ipLoc,int*back,std::string*backLoc);
 	std::string insert(std::string name);
 	std::string retrieve(std::string name,std::string client);
