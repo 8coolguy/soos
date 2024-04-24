@@ -17,6 +17,7 @@
  */
 # include <algorithm>
 # include <iostream>
+# include <fstream>
 # include <cassert>
 # include <string>
 # include <unistd.h>
@@ -221,7 +222,7 @@ string Table::insert(string name){
 	vector<string> groupObjPair = splitBy(name,"/");
 	if(groupObjPair.size()!=2) return "Argument needs to be divided by slash";
 	_nameMap.insert({name,partition });
-	
+	generateMetaData(groupObjPair[1]);	
 	int disk = getDisk(partition);
 	int backup = nextDisk(disk);
 	_partitionTable.insert({partition, make_pair(disk,backup) });
@@ -373,4 +374,10 @@ int Table::nextDisk(int i){
 	auto it	= find(disks.begin(),disks.end(),i);
 	int index = it - disks.begin(); 
 	return disks[(index+1) % disks.size()];
+}
+void Table::generateMetaData(string name){
+	string md5Sig = Table::splitBy(Table::cmdOutput("md5sum /tmp/achoudhury2Server/"+name,false)," ")[0];
+	ofstream ofs("/tmp/achoudhury2Server/."+name+".metadata",ofstream::out);
+    	ofs << md5Sig;
+    	ofs.close();
 }

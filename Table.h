@@ -54,6 +54,7 @@ public:
 	std::vector<int> listDisk();
 	static std::vector<std::string> splitBy(std::string s, std::string d);
 	int nextDisk(int i);
+	static void generateMetaData(std::string name);
 };
 
 
