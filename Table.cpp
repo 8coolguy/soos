@@ -237,11 +237,15 @@ string Table::insert(string name){
 	string src = "/tmp/achoudhury2Server/"+groupObjPair[1];
 	string dst = ":/tmp/achoudhury2/"+groupObjPair[0];
 	
+	string srcMeta = "/tmp/achoudhury2Server/."+groupObjPair[1];
+
 	system(("ssh " + ip1 + cmd).c_str());
-	system(("scp " + src + " " + ip1+ dst).c_str());	
+	system(("scp " + src + " " + ip1 + dst).c_str());	
+	system(("scp " + srcMeta + ".metadata " + ip1 + dst).c_str());	
 	//save to backup	
 	system(("ssh " + ip2 + cmd).c_str());
 	system(("scp " + src + " " + ip2+ dst).c_str());	
+	system(("scp " + srcMeta + ".metadata " + ip2+ dst).c_str());	
 	return "Your file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc +" and your file was saved in Disk: "+to_string(backup)+" located at "+ backLoc;
 }
 string Table::retrieve(string name,string client){
@@ -263,11 +267,22 @@ string Table::retrieve(string name,string client){
 	string ip2 =_user + "@"+ client;
 	string dst = ip2+ ":~/Downloads/";
 
-	//cout << ("scp " + src +" "+ dst) << endl;		
-	if(system(("scp " + src + " " + dst).c_str())==0)
-		return "Your file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc + " Saved to your ~/Downloads/ folder.";
-	if(system(("scp " + backUpSrc + " " + dst).c_str())==0)
-		return "Your Backup file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc + " Saved to your ~/Downloads/ folder.";
+	string md5Sig = Table::splitBy(Table::cmdOutput("ssh "+ ip1 +" \"md5sum /tmp/achoudhury2/" + name + "\"",false)," ")[0];
+	string md5SigBackUp = Table::splitBy(Table::cmdOutput("ssh "+ backUpIp + " \"md5sum /tmp/achoudhury2/" + name + "\"",false)," ")[0];
+	string md5SigMeta = Table::cmdOutput("ssh "+ ip1 +" \"cat /tmp/achoudhury2/" + groupObjPair[0]+"/."+groupObjPair[1]+".metadata\"",false);
+	string md5SigMetaBackUp = Table::cmdOutput("ssh "+ backUpIp +" \"cat /tmp/achoudhury2/" + groupObjPair[0] + "/." + groupObjPair[1] + ".metadata\"",false);
+	
+	if(md5Sig != md5SigMeta && md5SigBackUp!=md5SigMetaBackUp) return "Both files are corrupted";
+	string res;
+	if(md5Sig == md5SigMeta && system(("scp " + src + " " + dst).c_str())==0)
+		res = "Your file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc + " Saved to your ~/Downloads/ folder.";
+	if(md5SigBackUp == md5SigMetaBackUp && system(("scp " + backUpSrc + " " + dst).c_str())==0)
+		res = "Your Backup file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc + " Saved to your ~/Downloads/ folder.";
+	//restore	
+	//if(md5Sig != md5SigMeta) return "Both files are corrupted";
+	//if(md5SigBackUp != md5SigMetaBackUp) return "Both files are corrupted";
+	if(res.size() > 0)
+		return res;
 	return "Both Disks were corrupted";
 }
 string Table::deleteFile(string name){
@@ -380,4 +395,20 @@ void Table::generateMetaData(string name){
 	ofstream ofs("/tmp/achoudhury2Server/."+name+".metadata",ofstream::out);
     	ofs << md5Sig;
     	ofs.close();
+}
+void Table::clean(){
+	lock_guard<recursive_mutex> lock (_mutex);
+	vector<int> disks = listDisk();
+	for(auto disk: disks){
+		system(("ssh "+ _ipMap[disk] + " \"rm -rf /tmp/achoudhury2\"").c_str());
+		system(("ssh "+ _ipMap[disk] + " \"mkdir /tmp/achoudhury2\"").c_str());
+	}
+}
+string Table::cleanDisk(string address){
+	lock_guard<recursive_mutex> lock (_mutex);
+	auto it  = find(_ipMap.begin(),_ipMap.end(),address);
+	if(it==_ipMap.begin())return "This address is not a disk.";
+	system(("ssh "+ address + " \"rm -rf /tmp/achoudhury2\"").c_str());
+	system(("ssh "+ address + " \"mkdir /tmp/achoudhury2\"").c_str());
+		
 }

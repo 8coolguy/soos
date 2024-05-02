@@ -85,12 +85,12 @@ int main(int argc, char *argv[]){
 void createDirectory(char *argv[], int argc){
 	system("rm -rf /tmp/achoudhury2Server");
 	system("mkdir /tmp/achoudhury2Server/");
+	//prompt clean or not
 	for(int i = 2; i<argc; i++){
 		string ip = Table::charAToStr(argv[i],100);
 		t.loadDisk(ip);
-		system(("ssh "+ USER + "@" + ip + " \"rm -rf /tmp/achoudhury2\"").c_str());
-		system(("ssh "+ USER + "@" + ip + " \"mkdir /tmp/achoudhury2\"").c_str());
 	}
+	t.clean();
 	t.allocateDisks();
 }
 string handleCmd(int cmd, string arg,string ip){

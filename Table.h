@@ -55,6 +55,8 @@ public:
 	static std::vector<std::string> splitBy(std::string s, std::string d);
 	int nextDisk(int i);
 	static void generateMetaData(std::string name);
+	void clean();
+	std::string cleanDisk(std::string address);
 };
 
 
