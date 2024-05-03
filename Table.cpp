@@ -141,8 +141,9 @@ string Table::addDisk(string address){
 		}	
 	}
 	for(auto p: bufferMap) _partitionTable.at(p.first).first = p.second;
-	for(auto d: _diskTable) cout << d.start << " " << d.end << " " << d.disk << endl;
-	return res;
+	string parts = "start,end,disk\n";
+	for(auto d: _diskTable) parts += to_string(d.start) + "," + to_string(d.end) + "," + to_string(d.disk) + "\n";
+	return parts + res;
 }
 
 string Table::rmDisk(string address){
@@ -200,8 +201,9 @@ string Table::rmDisk(string address){
 	}
 	for(auto p: bufferMap) _partitionTable.at(p.first).first = p.second;
 	for(auto p: bbufferMap) _partitionTable.at(p.first).second= p.second;
-	for(auto d: _diskTable) cout << d.start << " " << d.end << " " << d.disk << endl;
-	return res;
+	string parts = "start,end,disk\n";
+	for(auto d: _diskTable) parts += to_string(d.start) + "," + to_string(d.end) + "," + to_string(d.disk) + "\n";
+	return parts + res;
 }
 int Table::diskIpLookUp(string name,int*disk,string*ipLoc,int *back,string *backLoc){
 	lock_guard<recursive_mutex> lock (_mutex);
