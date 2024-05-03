@@ -248,6 +248,19 @@ string Table::insert(string name){
 	system(("scp " + srcMeta + ".metadata " + ip2+ dst).c_str());	
 	return "Your file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc +" and your file was saved in Disk: "+to_string(backup)+" located at "+ backLoc;
 }
+string Table::restore(int srcDisk,int dstDisk, string name){
+	lock_guard<recursive_mutex> lock (_mutex);
+	vector<string> groupObjPair = splitBy(name,"/");
+	string src = _ipMap[srcDisk];
+	string dst = _ipMap[dstDisk];	
+	string metadata = "/."+groupObjPair[1]+".metadata ";
+	system(("ssh " + dst + " \"mkdir /tmp/achoudhury2\"").c_str());
+	system(("ssh " + dst + " \"mkdir /tmp/achoudhury2/" + groupObjPair[0] + "\"").c_str());
+	system(("scp "+src+":/tmp/achoudhury2/"+name+ " " +dst +":/tmp/achoudhury2/"+groupObjPair[0]).c_str());
+	system(("scp "+src+":/tmp/achoudhury2/"+groupObjPair[0]+metadata+ " " +dst +":/tmp/achoudhury2/"+groupObjPair[0]).c_str());
+	return "\n File "+groupObjPair[1]+" was corrupted and Restored from "+src+" to "+dst;
+
+}
 string Table::retrieve(string name,string client){
 	lock_guard<recursive_mutex> lock (_mutex);
 	int partition = getPartitionNumber(name);
@@ -279,8 +292,8 @@ string Table::retrieve(string name,string client){
 	if(md5SigBackUp == md5SigMetaBackUp && system(("scp " + backUpSrc + " " + dst).c_str())==0)
 		res = "Your Backup file was saved in Disk: "+to_string(disk)+" located at "+ ipLoc + " Saved to your ~/Downloads/ folder.";
 	//restore	
-	//if(md5Sig != md5SigMeta) return "Both files are corrupted";
-	//if(md5SigBackUp != md5SigMetaBackUp) return "Both files are corrupted";
+	if(md5Sig != md5SigMeta) res +=restore(back,disk,name);
+	if(md5SigBackUp != md5SigMetaBackUp) res+=restore(disk,back,name);
 	if(res.size() > 0)
 		return res;
 	return "Both Disks were corrupted";

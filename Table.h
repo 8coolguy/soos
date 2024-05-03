@@ -43,6 +43,7 @@ public:
 	std::string rmDisk(std::string address);
 	int diskIpLookUp(std::string name,int*disk,std::string*ipLoc,int*back,std::string*backLoc);
 	std::string insert(std::string name);
+	std::string restore(int srcDisk,int dstDisk, std::string name);
 	std::string retrieve(std::string name,std::string client);
 	std::string deleteFile(std::string name);
 	std::string lsCmd(int disk,std::string group);
