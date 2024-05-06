@@ -122,6 +122,8 @@ void handleClientInput(int connfd){
 		execute(4,arg,connfd);
 	else if(cmd=="remove" && arg.size())
 		execute(5,arg,connfd);
+	else if(cmd=="clean" && arg.size()==0)
+		execute(6,"hello",connfd);
 	else{
 		cout << HELP << endl;
 		handleClientInput(connfd);

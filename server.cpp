@@ -90,7 +90,10 @@ void createDirectory(char *argv[], int argc){
 		string ip = Table::charAToStr(argv[i],100);
 		t.loadDisk(ip);
 	}
-	t.clean();
+	string res;
+	cout << "Would you like to clean all disks?(y/n)" << endl;
+	cin >>res;
+	if(res=="y") t.clean();
 	t.allocateDisks();
 }
 string handleCmd(int cmd, string arg,string ip){
@@ -113,6 +116,10 @@ string handleCmd(int cmd, string arg,string ip){
 	  	case 3:
 			return handleDelete(arg);
 	    		break;
+		case 6:	
+			t.clean();	
+			return "All Disks Cleaned";
+			break;
 	}
 	return " ";
 }

@@ -1,8 +1,8 @@
-mkdir ../P1
-cp client.cpp ../P1
-cp server.cpp ../P1
-cp Table.cpp ../P1
-cp Table.h ../P1
+mkdir ../P2
+cp client.cpp ../P2
+cp server.cpp ../P2
+cp Table.cpp ../P2
+cp Table.h ../P2
 
 cp README.md ../P1	
 cp Makefile ../P1

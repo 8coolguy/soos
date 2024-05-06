@@ -5,4 +5,7 @@
 4. delete <user/object> - confirms if deleted or not
 5. add <disk> - add disk based on address
 6. remove <disk> - rm disk based on address
+7. clean - cleans disks.
+
+When Sever is Killed all partiotn information is lost, so you will have to reupload your data.
 

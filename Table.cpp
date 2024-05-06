@@ -38,10 +38,12 @@ Table::Table(string user,int pp){
 }
 void Table::init(std::string user,int pp){
 	_pp = pp;
+	if(pp>20)_pp=20;
 	_user = user;
 }
 int Table::loadDisk(string address){
 	lock_guard<recursive_mutex> lock (_mutex);
+	system(("ssh "+ address + " \"mkdir /tmp/achoudhury2\"").c_str());
 	auto it  = find(_ipMap.begin(),_ipMap.end(),"");
 	if(it==_ipMap.end()){
 		_ipMap.push_back(address);
@@ -418,6 +420,8 @@ void Table::clean(){
 		system(("ssh "+ _ipMap[disk] + " \"rm -rf /tmp/achoudhury2\"").c_str());
 		system(("ssh "+ _ipMap[disk] + " \"mkdir /tmp/achoudhury2\"").c_str());
 	}
+	_partitionTable.clear();
+	_nameMap.clear();
 }
 string Table::cleanDisk(string address){
 	lock_guard<recursive_mutex> lock (_mutex);
